@@ -39,7 +39,7 @@
         <p class="section-title">Recognition Results</p>
 
         <div class="info-grid">
-          {% for line in player_info.splitlines() %}
+          {% for line in celebrity_info.splitlines() %}
             {% if "**Full Name**" in line %}
               <div class="info-row">
                 <span class="info-icon">👤</span>
@@ -79,7 +79,7 @@
                   <li>{{ line.replace('  - ', '') }}</li>
             {% endif %}
           {% endfor %}
-          {% if player_info.find("**Top Achievements**") != -1 %}
+          {% if celebrity_info.find("**Top Achievements**") != -1 %}
                 </ul>
               </div>
           {% endif %}
@@ -89,8 +89,8 @@
         <div class="qa-section">
           <p class="section-title">Ask Anything</p>
           <form method="POST">
-            <input type="hidden" name="player_name" value="{{ player_info.splitlines()[0].split(':')[-1] }}">
-            <input type="hidden" name="player_info" value="{{ player_info }}">
+            <input type="hidden" name="celebrity_name" value="{{ celebrity_info.splitlines()[0].split(':')[-1] }}">
+            <input type="hidden" name="celebrity_info" value="{{ celebrity_info }}">
             <input type="hidden" name="result_img_data" value="{{ result_img_data }}">
             <div class="qa-input-row">
               <input class="qa-input" name="question" placeholder="e.g. What are their best movies?" required>

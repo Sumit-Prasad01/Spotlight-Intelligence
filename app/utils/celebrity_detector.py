@@ -14,7 +14,7 @@ class CelebrityDetector:
         
         self.api_key = Config.api_key
         self.api_url = Config.api_url
-        self.model = Config.model
+        self.model = Config.image_model
         
 
     def identify(self, image_bytes):
@@ -60,7 +60,11 @@ class CelebrityDetector:
                 "max_tokens": 1024     
             }
         
-            response = requests.post(self.api_url, headers = headers, json = prompt)
+            response = requests.post(
+                self.api_url, 
+                headers = headers, 
+                json = prompt 
+                )
 
             if response.status_code == 200:
                 result = response.json()['choices'][0]['message']['content']
