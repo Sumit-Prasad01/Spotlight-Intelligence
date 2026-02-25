@@ -1,11 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <title>Celebrity Recognition & Q&A</title>
+  <!-- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> -->
+  <link rel="stylesheet" href="../static/style.css">
 </head>
 <body>
-    
+  <div class="max-w-5xl mx-auto">
+
+    <!-- HEADER -->
+    <div class="hero">
+      <div class="hero-badge">✦ AI Powered</div>
+      <h1>Celebrity Detector</h1>
+      <p class="text-muted">Upload a photo · Identify instantly · Ask anything</p>
+    </div>
+
+    <!-- UPLOAD FORM -->
+    <form method="POST" enctype="multipart/form-data">
+      <div class="upload-card">
+        <input type="file" name="image" accept="image/*" required class="file-input">
+        <button type="submit" class="btn-primary">⚡ Detect Celebrity</button>
+      </div>
+    </form>
+
+    <!-- RESULTS -->
+    {% if result_img_data %}
+    <div class="results-grid">
+
+      <!-- Image -->
+      <div class="image-panel">
+        <div class="image-label">Detected</div>
+        <img src="data:image/jpeg;base64,{{ result_img_data }}" alt="Detected Celebrity">
+      </div>
+
+      <!-- Info + Q&A -->
+      <div class="info-panel">
+        <p class="section-title">Recognition Results</p>
+
+        <div class="info-grid">
+          {% for line in player_info.splitlines() %}
+            {% if "**Full Name**" in line %}
+              <div class="info-row">
+                <span class="info-icon">👤</span>
+                <span class="info-key">Full Name</span>
+                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
+              </div>
+              <hr class="info-divider">
+            {% elif "**Profession**" in line %}
+              <div class="info-row">
+                <span class="info-icon">🎭</span>
+                <span class="info-key">Profession</span>
+                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
+              </div>
+              <hr class="info-divider">
+            {% elif "**Nationality**" in line %}
+              <div class="info-row">
+                <span class="info-icon">🌍</span>
+                <span class="info-key">Nationality</span>
+                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
+              </div>
+              <hr class="info-divider">
+            {% elif "**Famous For**" in line %}
+              <div class="info-row">
+                <span class="info-icon">⭐</span>
+                <span class="info-key">Famous For</span>
+                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
+              </div>
+              <hr class="info-divider">
+            {% elif "**Top Achievements**" in line %}
+              <div>
+                <div class="info-row">
+                  <span class="info-icon">🏆</span>
+                  <span class="info-key">Achievements</span>
+                </div>
+                <ul class="achievement-list">
+            {% elif line.startswith("  - ") %}
+                  <li>{{ line.replace('  - ', '') }}</li>
+            {% endif %}
+          {% endfor %}
+          {% if player_info.find("**Top Achievements**") != -1 %}
+                </ul>
+              </div>
+          {% endif %}
+        </div>
+
+        <!-- Q&A -->
+        <div class="qa-section">
+          <p class="section-title">Ask Anything</p>
+          <form method="POST">
+            <input type="hidden" name="player_name" value="{{ player_info.splitlines()[0].split(':')[-1] }}">
+            <input type="hidden" name="player_info" value="{{ player_info }}">
+            <input type="hidden" name="result_img_data" value="{{ result_img_data }}">
+            <div class="qa-input-row">
+              <input class="qa-input" name="question" placeholder="e.g. What are their best movies?" required>
+              <button type="submit" class="btn-ask">Ask</button>
+            </div>
+          </form>
+
+          {% if answer %}
+          <div class="answer-box">
+            <div class="answer-label">Answer</div>
+            <div class="answer-text">{{ answer }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="star-strip">✦ &nbsp; ✦ &nbsp; ✦</div>
+  </div>
 </body>
 </html>
