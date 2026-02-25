@@ -25,7 +25,6 @@ class QAEngine:
                 "Content-Type": "application/json"
             }
 
-            # ✅ Properly formatted prompt using f-string
             prompt = f"""
 You are an expert AI assistant with deep knowledge about celebrities.
 
