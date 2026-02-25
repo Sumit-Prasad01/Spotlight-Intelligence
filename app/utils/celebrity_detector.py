@@ -1,5 +1,5 @@
-import os
 import base64
+import json
 import requests
 
 from app.common.custom_exception import CustomException
@@ -8,44 +8,57 @@ from app.config.config import Config
 
 logger = get_logger(__name__)
 
+
 class CelebrityDetector:
 
     def __init__(self):
-        
         self.api_key = Config.api_key
         self.api_url = Config.api_url
         self.model = Config.image_model
-        
 
     def identify(self, image_bytes):
         try:
-
+            # Encode image
             encoded_image = base64.b64encode(image_bytes).decode()
 
             headers = {
-                "Authorization" : f"Bearer {self.api_key}",
-                "Content-Type" : "application/json"
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
             }
 
-            prompt = {
+            payload = {
                 "model": self.model,
                 "messages": [
                     {
-                        "role": "user", 
+                        "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": """You are a celebrity recognition expert AI. 
-                                Identify the person in the image. If known, respond in this format:
+                                "text": """
+You are a celebrity recognition expert AI.
 
-                                - **Full Name**:
-                                - **Profession**:
-                                - **Nationality**:
-                                - **Famous For**:
-                                - **Top Achievements**:
+Identify the person in the image.
 
-                                If unknown, return "Unknown".
-                                """
+Respond ONLY in strict JSON format:
+
+{
+  "full_name": "",
+  "profession": "",
+  "nationality": "",
+  "famous_for": "",
+  "top_achievements": ""
+}
+
+If unknown, respond with:
+
+{
+  "full_name": "Unknown"
+}
+
+Do not return markdown.
+Do not add explanations.
+Return valid JSON only.
+"""
                             },
                             {
                                 "type": "image_url",
@@ -56,42 +69,35 @@ class CelebrityDetector:
                         ]
                     }
                 ],
-                "temperature": 0.3,    
-                "max_tokens": 1024     
+                "temperature": 0,
+                "max_tokens": 512
             }
-        
+
             response = requests.post(
-                self.api_url, 
-                headers = headers, 
-                json = prompt 
-                )
+                self.api_url,
+                headers=headers,
+                json=payload
+            )
 
-            if response.status_code == 200:
-                result = response.json()['choices'][0]['message']['content']
+            if response.status_code != 200:
+                logger.error(f"LLM API Error: {response.text}")
+                return {"full_name": "Unknown"}, "Unknown"
 
-                name = self.extract_name(result)
+            raw_content = response.json()["choices"][0]["message"]["content"]
 
-                return result, name
-            
-            logger.info(f"Successfully got response from LLM.")
-            
-            return "Unknown", ""
-        
-        except Exception as e:
-            logger.error(f"Error while generating response : {e}")
-            raise CustomException("Failed to generate response : ", e)
-        
-    
-    def extract_names(self, content):
-        try:
+            # Parse JSON safely
+            try:
+                data = json.loads(raw_content)
+            except json.JSONDecodeError:
+                logger.error("Invalid JSON returned by model.")
+                return {"full_name": "Unknown"}, "Unknown"
 
-            for line in content.splitlines():
-                if line.lower().startswith("- **full name**:"):
-                    return line.split(":")[1].strip()
-            logger.info(f"Names fetched successfully.")
-            
-            return "unknown"
+            name = data.get("full_name", "Unknown")
+
+            logger.info("Celebrity identification successful.")
+
+            return data, name
 
         except Exception as e:
-            logger.error(f"Error while extracting names : {e}")
-            raise CustomException("Failed to extract name :", e)
+            logger.error(f"Error while generating response: {e}")
+            raise CustomException("Failed to generate response", e)

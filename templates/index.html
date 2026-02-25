@@ -1,116 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Celebrity Recognition & Q&A</title>
-  <!-- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> -->
-  <link rel="stylesheet" href="../static/style.css">
-</head>
-<body>
-  <div class="max-w-5xl mx-auto">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Celebrity Recognition & Q&A</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
-    <!-- HEADER -->
-    <div class="hero">
-      <div class="hero-badge">✦ AI Powered</div>
-      <h1>Celebrity Detector</h1>
-      <p class="text-muted">Upload a photo · Identify instantly · Ask anything</p>
-    </div>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      .glass {
+        background: rgba(30, 27, 75, 0.4);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    </style>
+  </head>
 
-    <!-- UPLOAD FORM -->
-    <form method="POST" enctype="multipart/form-data">
-      <div class="upload-card">
-        <input type="file" name="image" accept="image/*" required class="file-input">
-        <button type="submit" class="btn-primary">⚡ Detect Celebrity</button>
-      </div>
-    </form>
+  <body class="bg-slate-950 text-slate-200 min-h-screen p-6">
+    <div class="max-w-6xl mx-auto space-y-10">
+      <!-- HEADER -->
+      <header class="text-center space-y-4">
+        <h1
+          class="text-5xl font-extrabold bg-gradient-to-r from-rose-400 to-purple-500 bg-clip-text text-transparent"
+        >
+          Celebrity Detector
+        </h1>
+        <p class="text-slate-400">
+          Upload an image and ask anything about the celebrity.
+        </p>
+      </header>
 
-    <!-- RESULTS -->
-    {% if result_img_data %}
-    <div class="results-grid">
+      <!-- UPLOAD FORM -->
+      <section class="max-w-xl mx-auto">
+        <form
+          method="POST"
+          enctype="multipart/form-data"
+          class="glass p-8 rounded-3xl shadow-xl flex flex-col gap-6"
+        >
+          <input
+            type="file"
+            name="image"
+            accept="image/*"
+            required
+            class="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-5 file:rounded-full file:border-0 file:bg-rose-500 file:text-white hover:file:bg-rose-600 cursor-pointer bg-white/5 border border-white/10 rounded-full"
+          />
 
-      <!-- Image -->
-      <div class="image-panel">
-        <div class="image-label">Detected</div>
-        <img src="data:image/jpeg;base64,{{ result_img_data }}" alt="Detected Celebrity">
-      </div>
+          <button
+            type="submit"
+            class="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold py-3 rounded-2xl"
+          >
+            Detect Celebrity
+          </button>
+        </form>
+      </section>
 
-      <!-- Info + Q&A -->
-      <div class="info-panel">
-        <p class="section-title">Recognition Results</p>
-
-        <div class="info-grid">
-          {% for line in celebrity_info.splitlines() %}
-            {% if "**Full Name**" in line %}
-              <div class="info-row">
-                <span class="info-icon">👤</span>
-                <span class="info-key">Full Name</span>
-                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
-              </div>
-              <hr class="info-divider">
-            {% elif "**Profession**" in line %}
-              <div class="info-row">
-                <span class="info-icon">🎭</span>
-                <span class="info-key">Profession</span>
-                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
-              </div>
-              <hr class="info-divider">
-            {% elif "**Nationality**" in line %}
-              <div class="info-row">
-                <span class="info-icon">🌍</span>
-                <span class="info-key">Nationality</span>
-                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
-              </div>
-              <hr class="info-divider">
-            {% elif "**Famous For**" in line %}
-              <div class="info-row">
-                <span class="info-icon">⭐</span>
-                <span class="info-key">Famous For</span>
-                <span class="info-val">{{ line.split(':', 1)[-1].strip() }}</span>
-              </div>
-              <hr class="info-divider">
-            {% elif "**Top Achievements**" in line %}
-              <div>
-                <div class="info-row">
-                  <span class="info-icon">🏆</span>
-                  <span class="info-key">Achievements</span>
-                </div>
-                <ul class="achievement-list">
-            {% elif line.startswith("  - ") %}
-                  <li>{{ line.replace('  - ', '') }}</li>
-            {% endif %}
-          {% endfor %}
-          {% if celebrity_info.find("**Top Achievements**") != -1 %}
-                </ul>
-              </div>
-          {% endif %}
-        </div>
-
-        <!-- Q&A -->
-        <div class="qa-section">
-          <p class="section-title">Ask Anything</p>
-          <form method="POST">
-            <input type="hidden" name="celebrity_name" value="{{ celebrity_info.splitlines()[0].split(':')[-1] }}">
-            <input type="hidden" name="celebrity_info" value="{{ celebrity_info }}">
-            <input type="hidden" name="result_img_data" value="{{ result_img_data }}">
-            <div class="qa-input-row">
-              <input class="qa-input" name="question" placeholder="e.g. What are their best movies?" required>
-              <button type="submit" class="btn-ask">Ask</button>
-            </div>
-          </form>
-
-          {% if answer %}
-          <div class="answer-box">
-            <div class="answer-label">Answer</div>
-            <div class="answer-text">{{ answer }}</div>
+      {% if image_filename %}
+      <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- IMAGE -->
+        <div class="lg:col-span-5">
+          <div
+            class="rounded-3xl overflow-hidden shadow-2xl border border-white/10"
+          >
+            <img
+              src="{{ url_for('static', filename='uploads/' + image_filename) }}"
+              alt="Detected Celebrity"
+              class="w-full h-auto object-cover"
+            />
           </div>
-          {% endif %}
         </div>
 
-      </div>
-    </div>
-    {% endif %}
+        <!-- INFO + QA -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- PROFILE -->
+          <div class="glass p-8 rounded-3xl shadow-xl">
+            <h2 class="text-2xl font-bold mb-6 text-white">Profile Insights</h2>
 
-    <div class="star-strip">✦ &nbsp; ✦ &nbsp; ✦</div>
-  </div>
-</body>
+            {% if celebrity_info.full_name == "Unknown" %}
+            <p class="text-slate-400">No celebrity identified.</p>
+            {% else %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="bg-white/5 p-4 rounded-2xl">
+                <p class="text-xs text-rose-400 font-bold uppercase mb-1">
+                  Full Name
+                </p>
+                <p class="text-lg font-semibold">
+                  {{ celebrity_info.full_name }}
+                </p>
+              </div>
+
+              <div class="bg-white/5 p-4 rounded-2xl">
+                <p class="text-xs text-rose-400 font-bold uppercase mb-1">
+                  Profession
+                </p>
+                <p class="text-lg font-semibold">
+                  {{ celebrity_info.profession }}
+                </p>
+              </div>
+
+              <div class="bg-white/5 p-4 rounded-2xl">
+                <p class="text-xs text-rose-400 font-bold uppercase mb-1">
+                  Nationality
+                </p>
+                <p class="text-lg font-semibold">
+                  {{ celebrity_info.nationality }}
+                </p>
+              </div>
+
+              <div class="bg-white/5 p-4 rounded-2xl sm:col-span-2">
+                <p class="text-xs text-rose-400 font-bold uppercase mb-1">
+                  Famous For
+                </p>
+                <p>{{ celebrity_info.famous_for }}</p>
+              </div>
+
+              <div class="bg-white/5 p-4 rounded-2xl sm:col-span-2">
+                <p class="text-xs text-rose-400 font-bold uppercase mb-2">
+                  Top Achievements
+                </p>
+                <p>{{ celebrity_info.top_achievements }}</p>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Q&A -->
+          <div class="glass p-8 rounded-3xl shadow-xl">
+            <h3 class="text-xl font-bold mb-4">Ask a Question</h3>
+
+            <form method="POST" class="relative">
+              <input
+                name="question"
+                placeholder="Ask about this celebrity..."
+                required
+                class="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-5 pr-28 outline-none"
+              />
+
+              <button
+                type="submit"
+                class="absolute right-2 top-2 bottom-2 bg-rose-500 hover:bg-rose-600 text-white px-6 rounded-xl font-bold text-sm"
+              >
+                Ask
+              </button>
+            </form>
+
+            {% if answer %}
+            <div
+              class="mt-6 p-5 rounded-2xl bg-rose-500/10 border border-rose-500/20"
+            >
+              <p class="text-slate-200">{{ answer }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </main>
+      {% endif %}
+
+      <footer class="text-center text-slate-500 text-sm pt-10">
+        &copy; 2026 Celebrity Detector AI
+      </footer>
+    </div>
+  </body>
 </html>
