@@ -1,70 +1,90 @@
 version: 2.1
 
+orbs:
+  gcp-gke: circleci/gcp-gke@1.4.0
+
 executors:
-  docker-executor:
-    docker:
-      - image: google/cloud-sdk:latest
+  machine-executor:
+    machine:
+      image: ubuntu-2204:current
     working_directory: ~/repo
 
 jobs:
-  checkout_code:
-    executor: docker-executor
+
+  build_and_push:
+    executor: machine-executor
     steps:
       - checkout
 
-  build_docker_image:
-    executor: docker-executor
-    steps:
-      - checkout
-      - setup_remote_docker
       - run:
-          name: Authenticate with google cloud
+          name: Install Google Cloud SDK
           command: |
-              echo "$GCLOUD_SERVICE_KEY" | base64 --decode > gcp-key.json
-              gcloud auth activate-service-account --key-file=gcp-key.json
-              gcloud auth configure-docker us-central1-docker.pkg.dev || gcloud auth configure-docker
+            sudo apt-get update
+            sudo apt-get install -y google-cloud-sdk
 
       - run:
-          name: Build and Push Image
+          name: Authenticate to GCP
           command: |
-              docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/llmops-repo/llmops-app:latest .
-              docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/llmops-repo/llmops-app:latest
+            echo "$GCLOUD_SERVICE_KEY" | base64 --decode > gcp-key.json
+            gcloud auth activate-service-account --key-file=gcp-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+
+      - run:
+          name: Configure Docker for Artifact Registry
+          command: |
+            gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/llmops-repo/llmops-app:$CIRCLE_SHA1 .
+
+      - run:
+          name: Push Docker Image
+          command: |
+            docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/llmops-repo/llmops-app:$CIRCLE_SHA1
 
   deploy_to_gke:
-    executor: docker-executor
+    executor: machine-executor
     steps:
       - checkout
-      - setup_remote_docker
+
       - run:
-          name: Authenticate with google cloud
+          name: Install Google Cloud SDK
           command: |
-              echo "$GCLOUD_SERVICE_KEY" | base64 --decode > gcp-key.json
-              gcloud auth activate-service-account --key-file=gcp-key.json
-              gcloud auth configure-docker us-central1-docker.pkg.dev || gcloud auth configure-docker
-      
+            sudo apt-get update
+            sudo apt-get install -y google-cloud-sdk
+
       - run:
-          name: Configure GKE
+          name: Authenticate to GCP
           command: |
-              gcloud container clusters get-credentials $GKE_CLUSTER --region $GOOGLE_COMPUTE_REGION --project $GOOGLE_PROJECT_ID
+            echo "$GCLOUD_SERVICE_KEY" | base64 --decode > gcp-key.json
+            gcloud auth activate-service-account --key-file=gcp-key.json
+            gcloud config set project $GOOGLE_PROJECT_ID
+
       - run:
-          name: Deploy to GKE
+          name: Get GKE Credentials
           command: |
-              kubectl apply -f kubernetes-deployment.yaml --validate=false
-              kubectl rollout restart deployment llmops-app
+            gcloud container clusters get-credentials $GKE_CLUSTER \
+              --region $GOOGLE_COMPUTE_REGION \
+              --project $GOOGLE_PROJECT_ID
+
+      - run:
+          name: Update Deployment Image
+          command: |
+            kubectl set image deployment/llmops-app \
+            llmops-app=us-central1-docker.pkg.dev/$GOOGLE_PROJECT_ID/llmops-repo/llmops-app:$CIRCLE_SHA1
+
+      - run:
+          name: Verify Rollout
+          command: |
+            kubectl rollout status deployment/llmops-app
 
 workflows:
   version: 2
-  deploy_pipeline:
+  llmops_pipeline:
     jobs:
-      - checkout_code
-      - build_docker_image:
-          requires:
-            - checkout_code
+      - build_and_push
       - deploy_to_gke:
           requires:
-            - build_docker_image
-
-    
-
-
-
+            - build_and_push
