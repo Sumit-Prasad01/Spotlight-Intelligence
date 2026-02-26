@@ -141,3 +141,5 @@ cython_debug/
 logs/
 
 app/static/
+
+gcp-key.json
